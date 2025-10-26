@@ -1,18 +1,20 @@
-# ---------- Build (NET 10) ----------
+# ---------- Build (.NET 10) ----------
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY . .
 
 # Restore & publish the AppHost explicitly
 RUN dotnet restore "ASPIRE.AppHost/ASPIRE.AppHost.csproj"
-# publish to a stable, known directory
-RUN dotnet publish "ASPIRE.AppHost/ASPIRE.AppHost.csproj" -c Release -o /out
+# Let dotnet publish to its default path (bin/Release/<TFM>/publish)
+RUN dotnet publish "ASPIRE.AppHost/ASPIRE.AppHost.csproj" -c Release
 
-# ---------- Runtime (NET 10 ASP.NET) ----------
+# ---------- Runtime (.NET 10 ASP.NET) ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
-# copy from the /out folder we created in the build stage
-COPY --from=build /out .
+
+# Copy the publish output from the build stage's default folder
+# The <TFM> folder (e.g., net10.0) is matched by the wildcard
+COPY --from=build /src/ASPIRE.AppHost/bin/Release/*/publish/ .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080
