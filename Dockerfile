@@ -2,7 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY . .
-RUN dotnet restore
+
+# Restore & publish the AppHost explicitly (don’t rely on a .sln)
+RUN dotnet restore "ASPIRE.AppHost/ASPIRE.AppHost.csproj"
 RUN dotnet publish "ASPIRE.AppHost/ASPIRE.AppHost.csproj" -c Release -o /app/publish
 
 # ---------- Runtime ----------
