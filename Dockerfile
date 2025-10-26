@@ -1,23 +1,19 @@
-# ---------- Build (use .NET 10 SDK) ----------
-# If the stable 10.0 images exist for you, use these:
+# ---------- Build (NET 10) ----------
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-# If that tag does not exist in your registry, use the nightly channel instead:
-# FROM mcr.microsoft.com/dotnet/nightly/sdk:10.0 AS build
-
 WORKDIR /src
 COPY . .
 
 # Restore & publish the AppHost explicitly
 RUN dotnet restore "ASPIRE.AppHost/ASPIRE.AppHost.csproj"
-RUN dotnet publish "ASPIRE.AppHost/ASPIRE.AppHost.csproj" -c Release -o /app/publish
+# publish to a stable, known directory
+RUN dotnet publish "ASPIRE.AppHost/ASPIRE.AppHost.csproj" -c Release -o /out
 
-# ---------- Runtime (use .NET 10 ASP.NET runtime) ----------
+# ---------- Runtime (NET 10 ASP.NET) ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
-# Or nightly if needed:
-# FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
-
 WORKDIR /app
-COPY --from=build /app/publish .
+# copy from the /out folder we created in the build stage
+COPY --from=build /out .
+
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080
 ENTRYPOINT ["dotnet","ASPIRE.AppHost.dll","--launch-profile","ASPIRE.AppHost Production"]
