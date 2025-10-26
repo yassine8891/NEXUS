@@ -1,22 +1,32 @@
-# ---------- Build Stage (.NET 10) ----------
+# ---------- Build stage ----------
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+
+# copy the whole repo (you can optimize later)
 COPY . .
 
-# Restore & publish the AppHost explicitly to a known directory
-RUN dotnet restore "ASPIRE.AppHost/ASPIRE.AppHost.csproj"
-RUN mkdir -p /publish \
- && dotnet publish "ASPIRE.AppHost/ASPIRE.AppHost.csproj" -c Release -o /publish
+# restore & publish only the AppHost project
+RUN dotnet restore ASPIRE.AppHost/ASPIRE.AppHost.csproj
+RUN dotnet publish ASPIRE.AppHost/ASPIRE.AppHost.csproj -c Release -o /app/publish
 
-# ---------- Runtime Stage (.NET 10 ASP.NET) ----------
+
+# ---------- Runtime stage ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+
+# Install curl for Coolify's healthcheck
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+COPY --from=build /app/publish .
 
-# Copy the published files from the build stage
-COPY --from=build /publish .
+# App settings
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_URLS=http://0.0.0.0:8080
 
-# ASP.NET hosting
-ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+# Web UI + game port (adjust if needed)
+EXPOSE 8080 8888
 
-ENTRYPOINT ["dotnet","ASPIRE.AppHost.dll","--launch-profile","ASPIRE.AppHost Production"]
+# Start the AppHost
+ENTRYPOINT ["dotnet", "ASPIRE.AppHost.dll"]
